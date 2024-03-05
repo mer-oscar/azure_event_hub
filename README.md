@@ -1,13 +1,11 @@
-# Conduit Connector for <resource>
-[Conduit](https://conduit.io) for <resource>.
+# Conduit Connector for Azure Event Hubs
+[Conduit](https://conduit.io) for [Azure Event Hubs](https://azure.microsoft.com/en-us/products/event-hubs).
 
 ## How to build?
 Run `make build` to build the connector.
 
 ## Testing
 Run `make test` to run all the unit tests. Run `make test-integration` to run the integration tests.
-
-The Docker compose file at `test/docker-compose.yml` can be used to run the required resource locally.
 
 ## Source
 A source connector pulls data from an external resource and pushes it to downstream resources via Conduit.

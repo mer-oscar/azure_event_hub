@@ -11,7 +11,7 @@ func (Config) Parameters() map[string]sdk.Parameter {
 	return map[string]sdk.Parameter{
 		"azure.clientId": {
 			Default:     "",
-			Description: "azure.clientId is your azure client ID",
+			Description: "azure.clientId is the azure client ID",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},
@@ -19,7 +19,7 @@ func (Config) Parameters() map[string]sdk.Parameter {
 		},
 		"azure.clientSecret": {
 			Default:     "",
-			Description: "azure.clientSecret is your azure client secret",
+			Description: "azure.clientSecret is the azure client secret",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},
@@ -35,7 +35,7 @@ func (Config) Parameters() map[string]sdk.Parameter {
 		},
 		"eventHubName": {
 			Default:     "",
-			Description: "eventHubName is your event hub name",
+			Description: "eventHubName is your event hub name- analogous to a kafka topic",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},
@@ -43,7 +43,7 @@ func (Config) Parameters() map[string]sdk.Parameter {
 		},
 		"eventHubNamespace": {
 			Default:     "",
-			Description: "eventHubNamespace is your FQNS",
+			Description: "eventHubNamespace is the FQNS of your event hubs resource",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},
