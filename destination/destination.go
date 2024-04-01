@@ -60,7 +60,7 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 			return 0, err
 		}
 		newBatchOptions = &azeventhubs.EventDataBatchOptions{
-			PartitionKey: to.Ptr[string](partitionKey.String()),
+			PartitionKey: to.Ptr(partitionKey.String()),
 		}
 	}
 
@@ -72,7 +72,7 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 	for i := 0; i < len(records); i++ {
 		err := batch.AddEventData(&azeventhubs.EventData{
 			Body:        records[i].Bytes(),
-			ContentType: to.Ptr[string]("application/json"),
+			ContentType: to.Ptr("application/json"),
 		}, nil)
 		if err != nil {
 			if errors.Is(err, azeventhubs.ErrEventDataTooLarge) {

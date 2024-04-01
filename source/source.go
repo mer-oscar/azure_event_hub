@@ -45,6 +45,7 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
+
 	return nil
 }
 
@@ -65,12 +66,17 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	}
 
 	var startPosition azeventhubs.StartPosition
-	startPosition.Earliest = to.Ptr[bool](true)
+	startPosition.Earliest = to.Ptr(true)
 
 	if pos != nil {
-		startPosition.Earliest = to.Ptr[bool](false)
+		startPosition.Earliest = to.Ptr(false)
 		startPosition.Inclusive = true
-		startPosition.SequenceNumber = to.Ptr[int64](24)
+
+		eventPos, err := parsePosition(pos)
+		if err != nil {
+			return err
+		}
+		startPosition.SequenceNumber = to.Ptr(eventPos.SequenceNumber)
 	}
 
 	for _, partitionID := range ehProps.PartitionIDs {
@@ -91,11 +97,6 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 
 func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 	select {
-	case err := <-s.readError:
-		if err != nil {
-			return sdk.Record{}, err
-		}
-		return sdk.Record{}, ctx.Err()
 	case rec := <-s.readBuffer:
 		return rec, nil
 	case <-ctx.Done():
@@ -108,9 +109,9 @@ func (s *Source) Ack(ctx context.Context, position sdk.Position) error {
 }
 
 func (s *Source) Teardown(ctx context.Context) error {
-	for _, client := range s.partitionClients {
-		if client != nil {
-			client.Close(ctx)
+	for _, pClient := range s.partitionClients {
+		if pClient != nil {
+			pClient.Close(ctx)
 		}
 	}
 
@@ -136,7 +137,7 @@ func (s *Source) dispatchPartitionClients(ctx context.Context) {
 						sdk.Logger(ctx).Err(err).Msg("error receiving events")
 						return
 					}
-					break
+					continue
 				case <-ctx.Done():
 					return
 				case <-time.After(time.Millisecond * 500):
@@ -145,9 +146,9 @@ func (s *Source) dispatchPartitionClients(ctx context.Context) {
 					events, err := client.ReceiveEvents(receiveCtx, 1000, nil)
 					cancelReceive()
 
-					if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+					if err != nil && (!errors.Is(err, context.DeadlineExceeded)) && !errors.Is(err, context.Canceled) {
 						s.readError <- err
-						return
+						continue
 					}
 
 					if len(events) == 0 {

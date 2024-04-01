@@ -1,15 +1,17 @@
 module github.com/mer-oscar/conduit-connector-azure-event-hub
 
-go 1.21
+go 1.22
 
-toolchain go1.21.1
+toolchain go1.22.1
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.5.1
 	github.com/Azure/azure-sdk-for-go/sdk/messaging/azeventhubs v1.0.3
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/eventhub/armeventhub v1.2.0
 	github.com/conduitio/conduit-connector-sdk v0.8.0
 	github.com/golangci/golangci-lint v1.55.2
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/matryer/is v1.4.1
 	github.com/oklog/ulid/v2 v2.1.0
 )
@@ -154,6 +156,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/prongbang/goenv v1.0.0 // indirect
 	github.com/quasilyte/go-ruleguard v0.4.0 // indirect
 	github.com/quasilyte/gogrep v0.5.0 // indirect
 	github.com/quasilyte/regex/syntax v0.0.0-20210819130434-b3f0c404a727 // indirect

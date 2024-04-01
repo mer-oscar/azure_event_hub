@@ -1,9 +1,9 @@
-package destination
+package azure_event_hub
 
 import (
 	"context"
-	"fmt"
 	"testing"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -12,6 +12,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/matryer/is"
 	"github.com/prongbang/goenv"
+	"go.uber.org/goleak"
 )
 
 type envConfig struct {
@@ -21,12 +22,10 @@ type envConfig struct {
 	AzureSubscriptionID string `envconfig:"AZURE_SUBSCRIPTION_ID"`
 }
 
-func Test_Destination(t *testing.T) {
-	eventhubDest := "destination-integration-test"
-	rgn, ns := "test-connector", "connector-eh"
+func TestAcceptance(t *testing.T) {
 	is := is.New(t)
-
 	ctx := context.Background()
+
 	err := goenv.LoadEnv("local.env")
 	is.NoErr(err)
 
@@ -34,14 +33,26 @@ func Test_Destination(t *testing.T) {
 	err = envconfig.Process("", &env)
 	is.NoErr(err)
 
-	// // make a new event hub
+	// make a new event hub
 	cred, err := azidentity.NewClientSecretCredential(env.AzureTenantID, env.AzureClientID, env.AzureClientSecret, nil)
 	is.NoErr(err)
+
+	eventhubAcceptance := "acceptance-test"
+	rgn, ns := "test-connector", "connector-eh"
+	fqns := ns + ".servicebus.windows.net"
+
+	cfg := map[string]string{
+		"azure.tenantId":     env.AzureTenantID,
+		"azure.clientId":     env.AzureClientID,
+		"azure.clientSecret": env.AzureClientSecret,
+		"eventHubName":       eventhubAcceptance,
+		"eventHubNamespace":  fqns,
+	}
 
 	clientFactory, err := armeventhub.NewClientFactory(env.AzureSubscriptionID, cred, nil)
 	is.NoErr(err)
 
-	_, err = clientFactory.NewEventHubsClient().CreateOrUpdate(ctx, rgn, ns, eventhubDest, armeventhub.Eventhub{
+	_, err = clientFactory.NewEventHubsClient().CreateOrUpdate(ctx, rgn, ns, eventhubAcceptance, armeventhub.Eventhub{
 		Properties: &armeventhub.Properties{
 			MessageRetentionInDays: to.Ptr[int64](1),
 			PartitionCount:         to.Ptr[int64](4),
@@ -50,46 +61,25 @@ func Test_Destination(t *testing.T) {
 	}, nil)
 	is.NoErr(err)
 
-	fqns := ns + ".servicebus.windows.net"
-
-	config := map[string]string{
-		"azure.tenantId":     env.AzureTenantID,
-		"azure.clientId":     env.AzureClientID,
-		"azure.clientSecret": env.AzureClientSecret,
-		"eventHubName":       eventhubDest,
-		"eventHubNamespace":  fqns,
-	}
-
-	con := New()
-	err = con.Configure(ctx, config)
-	is.NoErr(err)
-
+	// delete event hub
 	defer func() {
-		err := con.Teardown(ctx)
-		is.NoErr(err)
-		// delete event hub
-		_, err = clientFactory.NewEventHubsClient().Delete(ctx, rgn, ns, eventhubDest, nil)
+		_, err = clientFactory.NewEventHubsClient().Delete(ctx, rgn, ns, eventhubAcceptance, nil)
 		is.NoErr(err)
 	}()
 
-	// open
-	err = con.Open(ctx)
-	is.NoErr(err)
-
-	// prepare recs
-	recs := make([]sdk.Record, 0)
-	for i := range 10 {
-		rec := sdk.Util.Source.NewRecordCreate(
-			sdk.Position{},
-			nil,
-			nil,
-			sdk.RawData(fmt.Sprintf("record %d", i)),
-		)
-		recs = append(recs, rec)
-	}
-
-	// write
-	count, err := con.Write(ctx, recs)
-	is.NoErr(err)
-	is.Equal(count, 10)
+	sdk.AcceptanceTest(t, sdk.ConfigurableAcceptanceTestDriver{
+		Config: sdk.ConfigurableAcceptanceTestDriverConfig{
+			Connector:         Connector,
+			GoleakOptions:     []goleak.Option{goleak.IgnoreCurrent()},
+			SourceConfig:      cfg,
+			DestinationConfig: cfg,
+			GenerateDataType:  sdk.GenerateRawData,
+			Skip: []string{
+				"TestSource_Configure_RequiredParams",
+				"TestDestination_Configure_RequiredParams",
+			},
+			WriteTimeout: 5000 * time.Millisecond,
+			ReadTimeout:  5000 * time.Millisecond,
+		},
+	})
 }
